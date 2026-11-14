@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FocusML — Разметка по тексту</title>
+  <style>
+    @font-face{font-family:Onest;src:url('asset:onest-cyrillic.woff2');font-weight:400 600;font-display:swap;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+    @font-face{font-family:Onest;src:url('asset:onest-latin.woff2');font-weight:400 600;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+    :root{font-family:Onest,Arial,sans-serif;color:#0f172a;background:#fff;--muted:#64748b;--line:#dbe4ef;--blue:#006398;--sky:#009fdf;--pale:#eef8fc;--violet:#6366f1;--indigo:#4f46e5;--lilac:#eef0fd;--shadow:0 0 10px #0f172a0d}
+    *{box-sizing:border-box}
+    [hidden]{display:none!important}
+    body{margin:0;min-height:100dvh;display:flex;flex-direction:column;font-size:14px;line-height:1.5}
+    button,input,textarea,select{font:inherit;color:inherit}
+    button{background:none;border:0;border-radius:8px;cursor:pointer;padding:0}
+    button:disabled{cursor:default;opacity:.52}
+    button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+    img{display:block}
+    .demo{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:7px 20px;border-bottom:1px solid #e9eef4;background:#f8fafc;z-index:10}
+    .demo-info,.demo-actions{display:flex;align-items:center;gap:14px}
+    .demo b{font-weight:600;white-space:nowrap}
+    #guide{color:#51627a;margin:0}
+    .demo button{border:1px solid var(--line);padding:4px 10px;background:#fff;white-space:nowrap}
+    .demo button:hover{border-color:#a9b8cd}
+    .demo #example{color:var(--indigo);border-color:#dce0fb}
+    .viewport{flex:1;min-height:0;display:grid;place-items:center;padding:0 12px}
+    .app{position:relative;width:1120px;zoom:var(--fit,1);padding:40px 0}
+    .crumb{display:flex;align-items:center;gap:8px;color:var(--muted);margin-bottom:17px;height:26px}
+    .crumb b{font-weight:600;color:#0f172a}
+    .heading{height:36px;margin-bottom:7px;display:flex;align-items:center;gap:12px}
+    .heading h1{font-size:20px;line-height:24px;letter-spacing:-.3px;font-weight:600;margin:0}
+    .mode{display:flex;align-items:center;gap:12px;margin-left:auto;padding-right:10px;color:var(--muted);font-size:18px;font-weight:600}
+    .workspace{position:relative;height:914px;border:1px solid var(--line);border-radius:8px;background:#f5f8fb}
+    .canvas{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
+    .canvas[data-pan=true]{cursor:grab;touch-action:none}
+    .canvas[data-pan=true] .box{cursor:inherit}
+    .canvas[data-dragging]{cursor:grabbing}
+    #scene{position:absolute;left:87px;top:80px;width:975px;height:749px;transform:translate(var(--pan-x,0px),var(--pan-y,0px)) scale(var(--scale,1));user-select:none}
+    #photo{width:100%;height:100%;object-fit:cover;border:1px solid var(--line);border-radius:8px;background:#eaf0f3}
+    .icon,.action{display:inline-flex;justify-content:center;align-items:center;gap:7px;font-weight:500}
+    .icon{width:36px;height:36px;flex:none;color:var(--blue)}
+    button.icon:hover:not(:disabled){background:var(--pale)}
+    .zoom,.tools,.pagination{position:absolute;background:white;box-shadow:var(--shadow);border-radius:8px;display:flex;align-items:center}
+    .zoom{top:19px;left:50%;transform:translateX(-50%);padding:0 4px}
+    .zoom-value{padding:0 9px 0 12px;margin-left:8px;border-left:1px solid var(--line);border-radius:0;font-weight:500;min-width:58px}
+    .tools{left:19px;top:240px;flex-direction:column;gap:2px;padding:4px;color:var(--blue)}
+    .tools hr{width:22px;margin:6px auto;border:0;border-top:1px solid var(--line)}
+    .tools .hand[aria-pressed=true]{background:var(--sky);color:#fff}
+    .tools .hand[aria-pressed]:is(:hover,:focus-visible){background:#38bdf8}
+    .tools .hand[aria-pressed=false]:not(:hover,:focus-visible) img{filter:brightness(0) saturate(100%) invert(26%) sepia(84%) saturate(1397%) hue-rotate(168deg) brightness(90%) contrast(101%)}
+    #terminal{width:32px;height:32px;margin:3px 0}
+    #terminal:hover,#terminal:focus-visible{background:var(--lilac)}
+    #terminal[aria-pressed=true]{background:var(--violet)}
+    #terminal[aria-pressed=false] .active-icon,#terminal[aria-pressed=true] .inactive-icon{display:none}
+    .paging{position:absolute;bottom:19px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px}
+    .pagination{position:static;height:36px;min-width:182.5px;justify-content:space-between;gap:10px;color:var(--blue);padding:0 5px}
+    .pagination strong{font-weight:500;border:1px solid #80d1ff;color:#0f172a;border-radius:9px;padding:5px 9px;margin-right:7px}
+    .action{min-height:36px;padding:0 12px;white-space:nowrap}
+    #save{min-width:108px;font-weight:600}
+    #save[data-saved]{background:#f0f9ff;color:#075985;box-shadow:0 0 0 1px #bae6fd;opacity:1}
+    .blue{background:var(--sky);color:white}
+    .blue:hover:not(:disabled){background:#008bc4}
+    .primary{background:var(--violet);color:white;width:100%}
+    .primary:hover:not(:disabled){background:#5354de}
+    .quiet{background:var(--lilac);color:var(--indigo)}
+    .quiet:hover:not(:disabled){background:#e2e5ff}
+    .avatar{position:absolute;left:-87px;bottom:40px;width:50px;height:49px;display:grid;place-items:center;color:var(--blue);font-size:20px;background:url('asset:avatar.png') center / contain no-repeat}
+    .card{background:#fff;box-shadow:var(--shadow);border:1px solid var(--line);border-radius:8px;padding:11px}
+    .tooltip{position:absolute;left:73px;top:436px;width:252px;z-index:3}
+    .tooltip::before{content:url('asset:tooltip-arrow.svg');position:absolute;left:-8px;top:50%;transform:translateY(-50%) rotate(90deg)}
+    .card-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .card-title h2{font-weight:600;font-size:16px;line-height:24px;margin:0}
+    .card-title .icon{width:24px;height:24px}
+    .tooltip .card-title{justify-content:flex-start}
+    .tooltip p{font-size:12px;line-height:16px}
+    .workspace:has(.tooltip:not([hidden])) #terminal{background:var(--lilac)}
+    .card p{margin:4px 0 0;color:var(--muted)}
+    .prompt{position:absolute;left:80px;top:475px;transform:translateY(-50%);width:344px;z-index:4}
+    #rows{display:grid;gap:16px;max-height:448px;overflow:auto;margin-top:16px;padding:2px;margin-inline:-2px}
+    #rows:empty{display:none}
+    .request{min-width:0;margin:0;padding:0;border:0;display:grid;gap:9px}
+    .request label{display:grid;gap:3px;font-size:12px;font-weight:600}
+    .select{height:34px;display:flex;align-items:center;position:relative}
+    .select .dot{position:absolute;left:7px;pointer-events:none}
+    .dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--dot,#d2dae5);object-fit:contain}
+    select,textarea,#class-name{width:100%;border:1px solid var(--line);border-radius:8px;font-size:14px;font-weight:400;line-height:21px}
+    select{appearance:none;background:white url('asset:select-down.svg') right 6px center no-repeat;height:34px;padding:0 27px 0 24px;box-shadow:0 1px 2px #0f172a0d}
+    textarea{display:block;min-height:75px;padding:8px 10px;resize:vertical;background:#f5f7fa url('asset:resize.svg') bottom 5px right 5px no-repeat}
+    textarea::placeholder{color:var(--muted)}
+    .prompt[data-busy=true] #rows{opacity:.53}
+    .prompt .add-query{display:flex;margin:16px auto 0;min-height:24px;padding:0 9px;font-size:12px}
+    .prompt .primary{margin-top:16px}
+    .prompt .prompt-message{margin:8px 0 4px;padding-left:9px}
+    .prompt-message:empty{display:none}
+    .prompt #invalid{color:#f1282a}
+    .prompt-message::before{content:'ⓘ';margin-right:8px}
+    [aria-invalid=true]{border-color:#ff3c46}
+    .spinning{animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .sidebar{position:absolute;top:18px;right:calc(20px - 1px);width:310px;border:0;border-radius:16px;z-index:5;padding:12px}
+    .sidebar.empty{width:246px;padding:16px;min-height:64px}
+    .side-head{display:flex;align-items:center;gap:10px}
+    .side-tabs{flex:1;display:flex;padding:3px;background:var(--pale);border-radius:12px}
+    .side-tabs button{flex:1;height:34px;font-weight:600;border-radius:10px}
+    .side-tabs button[aria-pressed=true]{background:white;box-shadow:0 0 0 1px #e4edf5}
+    .side-body{border-top:1px solid #dceffa;margin-top:12px;padding-top:12px}
+    .sidebar.empty .side-body{border:0;margin:0;padding:0}
+    .sidebar.empty .add-class{height:32px;min-height:32px;justify-content:center}
+    .add-class,.confirm-all{width:100%;justify-content:flex-start;background:var(--pale);color:var(--blue);padding:0 10px}
+    .add-class.blue{background:var(--sky);color:#fff}
+    .class-list{display:grid;gap:4px;margin-top:12px;max-height:164px;overflow:auto}
+    .class-row{display:flex;align-items:center;min-height:36px;border-radius:6px}
+    .class-row:has(.class-item[aria-pressed=true]),.object-item[data-selected=true]{background:var(--pale);box-shadow:inset 0 0 0 1.5px #a8e6ff}
+    .class-row:not(:has(.class-item[aria-pressed=true])):is(:hover,:focus-within,[data-editing]){box-shadow:inset 0 0 0 1px var(--pale),0 1px 3px #0f172a0d}
+    .class-item,.class-edit{flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;height:36px;padding:0 8px;border-radius:6px}
+    .class-item span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .class-actions{display:flex;padding-right:1px;opacity:0;pointer-events:none}
+    .class-row:is(:hover,:focus-within) .class-actions{opacity:1;pointer-events:auto}
+    .class-row .icon{width:32px;height:32px}
+    .class-edit{padding-right:1px}
+    .class-edit input{flex:1;min-width:0;border:0;background:none;padding:0 2px}
+    .confirm-all:hover,.add-class:not(.blue):hover{background:#e2f3fc}
+    @media(hover:none){.class-actions{opacity:1;pointer-events:auto}}
+    .object-list{max-height:220px;overflow:auto;display:grid;gap:4px;scrollbar-color:#dbe4ef white;scrollbar-width:thin}
+    .object-item{display:flex;align-items:center;gap:12px;padding:4px 10px;height:40px;width:100%;max-width:276px;border-radius:8px}
+    .object-item[data-confirmed=true]{cursor:pointer}
+    .object-item .select{flex:1;min-width:0}
+    .object-item .select,.object-item select{height:32px}
+    .object-spark{width:20px;flex:none;display:grid;place-items:center}
+    .object-swatch{width:20px;height:20px;background:var(--object-color);border-radius:4px}
+    .object-item .icon{width:32px;height:32px}
+    .object-item[data-confirmed=true] .delete{opacity:0;pointer-events:none}
+    .object-item:is(:hover,:focus-within,[data-selected=true]){background:#f0f9ff}
+    .object-item[data-confirmed=false]:is(:hover,:focus-within){border-radius:10px}
+    .object-item:is(:hover,:focus-within) button.confirm{background:#fff}
+    .object-item[data-confirmed=true]:is(:hover,:focus-within,[data-selected=true]) .delete{opacity:1;pointer-events:auto}
+    @media(hover:none){.object-item[data-confirmed=true] .delete{opacity:1;pointer-events:auto}}
+    .confirm-all{margin-top:12px}
+    .settings{position:absolute;bottom:29px;right:22px;width:355px;z-index:4}
+    .ranges{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin:12px 0 16px}
+    .ranges label{display:grid;grid-template-columns:1fr auto;gap:3px}
+    .ranges output{color:var(--muted)}
+    input[type=range]{grid-column:1/-1;appearance:none;cursor:pointer;width:100%;height:6px;margin:4px 0;border-radius:6px;background:linear-gradient(to right,var(--violet) var(--value),#c7d2de var(--value))}
+    input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;border:1px solid var(--violet);background:#fff}
+    input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;border:1px solid var(--violet);background:#fff}
+    .settings .action{width:100%;min-height:28px}
+    .cancel{margin-top:4px;border:1px solid #f4f5f7;color:#ed242a}
+    .box{position:absolute;border:2px dashed var(--stroke);background:color-mix(in srgb,var(--stroke) 9%,transparent);border-radius:0}
+    .box[aria-pressed=false]:hover:not([data-confirmed=true]){outline:1px solid var(--stroke);outline-offset:2px}
+    .box[data-confirmed=true]{border-style:solid}
+    .box[aria-pressed=true]{border-color:transparent}
+    .box-selection{display:none;position:absolute;inset:-1px;width:calc(100% + 2px);height:calc(100% + 2px);overflow:visible;pointer-events:none;fill:none;stroke:var(--stroke);stroke-width:2;stroke-dasharray:5 5;animation:march 600ms linear infinite}
+    .box[aria-pressed=true] .box-selection{display:block}
+    @keyframes march{to{stroke-dashoffset:-10}}
+    .box[data-highlighted]{z-index:1;box-shadow:0 0 0 200vmax #0005}
+    .box .box-label{position:absolute;bottom:100%;left:0;white-space:nowrap;background:var(--stroke);font-size:10px;line-height:20px;padding:0 4px;color:#0c1721}
+    .cross{position:absolute;left:276px;top:397px;pointer-events:none}
+    dialog{padding:20px;width:min(360px,calc(100vw - 28px));border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 45px #0f172a30}
+    dialog::backdrop{background:#0f172a29}
+    dialog label{display:grid;gap:5px;margin:16px 0 10px;font-weight:600}
+    #class-name{padding:8px 10px}
+    .presets{display:flex;gap:6px;flex-wrap:wrap}
+    .presets button{padding:4px 10px;background:var(--pale);color:var(--blue)}
+    .dialog-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+    .dialog-footer button{min-height:36px;padding:0 12px}
+    .dialog-footer [data-close]{background:#f5f8fb}
+    @media(max-width:700px){
+      .demo{align-items:flex-start;flex-wrap:wrap;gap:6px;padding:8px 12px}
+      .demo-info{align-items:flex-start;gap:8px;font-size:13px}
+      .demo-actions{gap:6px;flex-wrap:wrap}
+      .demo button{font-size:12px}
+      .viewport{display:block;padding:0 10px}
+      .app{width:auto;zoom:1;padding:14px 0}
+      .crumb{margin-bottom:6px;font-size:12px}
+      .mode{font-size:14px}
+      .avatar{display:none}
+      .workspace{height:auto;padding:50px 8px 12px;display:flex;flex-direction:column;align-items:stretch;gap:10px}
+      .canvas{position:relative;aspect-ratio:975/749}
+      #scene{inset:0;width:auto;height:auto}
+      .zoom{top:8px;left:auto;right:8px;transform:none}
+      .tools{left:8px;top:8px;flex-direction:row;gap:2px}
+      .tools button:disabled,.tools hr{display:none}
+      #terminal{margin:0}
+      .prompt,.sidebar,.settings{position:static;transform:none;width:100%;z-index:auto}
+      .sidebar.empty{width:100%;min-height:0;padding:8px 11px}
+      .sidebar{order:1}
+      .prompt,.settings{order:2}
+      .paging{position:static;transform:none;align-self:center;order:3;flex-wrap:wrap;justify-content:center}
+      .tooltip{left:6px;top:50px;max-width:calc(100% - 12px)}
+      .tooltip::before,.box .box-label,.cross{display:none}
+      #rows{max-height:none}
+    }
+    @media(prefers-reduced-motion:reduce){.spinning,.box-selection{animation:none}}
+  </style>
+</head>
+<body>
+  <header class="demo">
+    <div class="demo-info"><b>FocusML</b><p id="guide" role="status"></p></div>
+    <div class="demo-actions">
+      <button id="example" hidden>Подставить пример</button>
+      <button id="reset">С начала</button>
+      <button id="fullscreen">На весь экран</button>
+    </div>
+  </header>
+  <div class="viewport">
+    <main class="app" aria-label="Редактор разметки">
+      <div class="crumb"><button disabled>Проекты</button><img src="asset:next.svg" alt=""><button disabled>Проект</button><img src="asset:next.svg" alt=""><b>Разметка</b></div>
+      <div class="heading"><h1>Арбуз_0.jpg</h1><button class="mode" disabled>Детекция <img src="asset:back.svg" alt=""></button></div>
+      <div class="workspace">
+        <div class="canvas" id="canvas" data-pan="true" tabindex="0" role="region" aria-label="Холст разметки" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight">
+          <div id="scene"><img id="photo" draggable="false" alt="Арбузы на деревянном столе"><div id="boxes"></div><img class="cross" id="cross" alt="" src="asset:cross.svg" hidden></div>
+        </div>
+        <div class="zoom" aria-label="Масштаб">
+          <button class="icon" id="zoom-in" aria-label="Приблизить"><img src="asset:zoom-in.svg" alt=""></button>
+          <button class="icon" id="zoom-out" aria-label="Отдалить"><img src="asset:zoom-out.svg" alt=""></button>
+          <button class="zoom-value" id="zoom-value" aria-label="Масштаб 100%. Сбросить масштаб и положение" title="Сбросить масштаб и положение">100%</button>
+        </div>
+        <div class="tools" aria-label="Панель инструментов">
+          <button class="icon" aria-label="Выбор объекта" disabled><img src="asset:focus.svg" alt=""></button><button class="icon" aria-label="Ручная разметка" disabled><img src="asset:pen.svg" alt=""></button><button class="icon hand" id="hand" aria-label="Перемещение по холсту" title="Перемещение по холсту" aria-controls="canvas" aria-pressed="true"><img src="asset:hand.svg" alt=""></button><hr>
+          <button class="icon" aria-label="Отменить действие" disabled><img src="asset:undo.svg" alt=""></button><button class="icon" aria-label="Повторить действие" disabled><img src="asset:redo.svg" alt=""></button><hr>
+          <button class="icon" id="terminal" aria-label="Разметка по тексту" aria-describedby="tooltip" aria-controls="prompt" aria-pressed="false"><img class="inactive-icon" src="asset:terminal.svg" alt=""><img class="active-icon" src="asset:terminal-active.svg" alt=""></button>
+          <button class="icon" aria-label="Разметка по аналогии" disabled><img src="asset:combine.svg" alt=""></button><hr>
+          <button class="icon" aria-label="Настройки" disabled><img src="asset:settings.svg" alt=""></button><button class="icon" aria-label="Дополнительные инструменты" disabled><img src="asset:more.svg" alt=""></button>
+        </div>
+        <div class="card tooltip" id="tooltip" role="tooltip">
+          <div class="card-title"><h2>Разметка по тексту</h2><img src="asset:tooltip-spark.svg" alt=""></div>
+          <p>Определяет объекты на изображении по текстовому запросу.</p>
+        </div>
+        <form class="card prompt" id="prompt" aria-labelledby="prompt-title" hidden>
+          <div class="card-title"><h2 id="prompt-title">Разметка по тексту</h2><button class="icon" id="close-prompt" type="button" aria-label="Закрыть окно разметки"><img src="asset:close.svg" alt=""></button></div>
+          <p id="prompt-description"></p>
+          <div id="rows"></div>
+          <button class="action quiet add-query" id="add-query" type="button"><span aria-hidden="true">＋</span> Добавить</button>
+          <button class="action primary" id="start" type="submit"><img id="start-icon" src="asset:spark.svg" alt=""><span id="start-label">Начать разметку</span></button>
+          <p id="invalid" class="prompt-message" role="alert" hidden>Заполните все поля</p>
+          <p id="not-found" class="prompt-message" role="status"></p>
+        </form>
+        <aside class="card sidebar empty" id="sidebar" aria-label="Классы и объекты">
+          <div class="side-head" id="side-head" hidden>
+            <div class="side-tabs"><button id="classes-tab" aria-pressed="true">Классы</button><button id="objects-tab" aria-pressed="false">Объекты</button></div>
+            <button class="icon" id="collapse" aria-label="Свернуть панель" aria-expanded="true"><img src="asset:collapse.svg" alt=""></button>
+          </div>
+          <div class="side-body" id="side-body">
+            <div id="classes">
+              <button class="action blue add-class" id="add-class"><img id="add-class-icon" src="asset:white-plus.svg" alt=""> Добавить класс</button>
+              <div class="class-list" id="class-list" hidden></div>
+            </div>
+            <div id="objects" hidden><div id="object-list" class="object-list"></div><button id="confirm-all" class="action confirm-all"><img src="asset:confirm-all.svg" alt=""> Подтвердить всю разметку</button></div>
+          </div>
+        </aside>
+        <aside class="card settings" id="result-settings" aria-labelledby="settings-title" hidden>
+          <div class="card-title"><h2 id="settings-title">Настройка ИИ разметки</h2><button class="icon" id="close-settings" aria-label="Закрыть настройки"><img src="asset:close.svg" alt=""></button></div>
+          <div class="ranges">
+            <label>Точность <output id="accuracy-value">80%</output><input id="accuracy" type="range" min="0" max="100" value="80" title="Минимальная точность для новой рамки"></label>
+            <label>Объединение <output id="overlap-value">20%</output><input id="overlap" type="range" min="0" max="100" value="20" title="Чем выше значение, тем легче объединяются пересекающиеся рамки одного класса"></label>
+          </div>
+          <button class="action quiet" id="apply-results"><img src="asset:confirm-all.svg" alt=""><span id="apply-label"></span></button>
+          <button class="action cancel" id="cancel-results">Отменить</button>
+        </aside>
+        <div class="paging">
+          <div class="pagination" aria-label="Изображение 12 из 13"><button class="icon" aria-label="Предыдущее изображение" disabled><img src="asset:previous.svg" alt=""></button><span><strong>12</strong> / 13</span><button class="icon" aria-label="Следующее изображение" disabled><img src="asset:next.svg" alt=""></button></div>
+          <button class="action blue" id="save">Сохранить</button>
+        </div>
+      </div>
+    </main>
+  </div>
+  <dialog id="class-dialog" aria-labelledby="class-title">
+    <form id="class-form">
+      <div class="card-title"><h2 id="class-title">Добавить класс</h2></div>
+      <label>Название класса<input id="class-name" placeholder="Например, Арбуз" required maxlength="40" autocomplete="off"></label>
+      <div class="presets" id="presets"></div>
+      <div class="dialog-footer"><button data-close type="button">Отменить</button><button class="blue" type="submit">Создать класс</button></div>
+    </form>
+  </dialog>
+  <template id="box-selection"><svg class="box-selection" aria-hidden="true"><rect width="100%" height="100%"/></svg></template>
+  <script>
+    const $ = id => document.getElementById(id);
+    const icons = {
+      whitePlus: 'asset:white-plus.svg', bluePlus: 'asset:blue-plus.svg',
+      spark: 'asset:spark.svg', loading: 'asset:loading.svg', objectSpark: 'asset:object-spark.svg', confirm: 'asset:confirm.svg', delete: 'asset:delete.svg', hoverDelete: 'asset:object-hover-delete.svg',
+      classEdit: 'asset:class-edit.svg', classDelete: 'asset:class-delete.svg', classConfirm: 'asset:class-confirm.svg',
+      watermelon: 'asset:watermelon-dot.svg', melon: 'asset:melon-dot.svg', apple: 'asset:apple-dot.svg'
+    };
+    const photos = { watermelon: 'asset:watermelon.jpg', fruit: 'asset:fruit.jpg' };
+    const presets = [
+      { name: 'Арбуз', color: '#a6f4d4', solidColor: '#29cf9c', icon: icons.watermelon, example: 'Арбуз. Зелёный. Полосатый', pattern: /(?<![\p{L}\p{N}])(?:арбуз(?:ы|а|ов)?|watermelons?)(?![\p{L}\p{N}])/iu },
+      { name: 'Дыня', color: '#ffd0a3', solidColor: '#ff9b53', icon: icons.melon, example: 'Дыня. Круглое. Текстурное', pattern: /(?<![\p{L}\p{N}])(?:дын[яиюь]|melons?)(?![\p{L}\p{N}])/iu },
+      { name: 'Яблоко', color: '#ffb2bb', solidColor: '#ff6e83', icon: icons.apple, example: 'Яблоко. Красное. Небольшое', pattern: /(?<![\p{L}\p{N}])(?:яблок[оаи]?|apples?)(?![\p{L}\p{N}])/iu }
+    ];
+    // Boxes use the coordinate space of the 975 × 749 image canvas. Additional scores are demo fixtures.
+    const geometry = {
+      watermelon: [
+        [0,118,269,196,190,70], [0,397,50,198,183,82], [0,258,420,186,176,92],
+        [0,269,169,166,152,88], [0,548,131,124,133,61], [0,393,221,204,202,97],
+        [0,596,197,185,139,78], [0,729,163,187,168,90], [0,896,250,79,104,58],
+        [0,607,260,241,160,96], [0,299,307,167,137,87], [0,54,383,119,166,73],
+        [0,91,443,177,164,94], [0,424,381,224,218,98], [0,649,410,197,189,95],
+        [0,774,372,201,188,91], [0,899,299,76,110,72], [0,238,246,41,52,51], [0,608,363,94,73,55]
+      ],
+      fruit: [
+        [0,99,265,208,202,70], [0,393,39,201,188,82], [0,248,421,187,187,92],
+        [0,255,164,197,182,88], [0,520,127,156,159,65], [0,395,222,202,200,96],
+        [0,588,193,193,151,78], [0,767,154,158,150,90], [0,909,246,66,83,52],
+        [0,609,259,245,161,97], [0,290,308,174,148,86], [0,40,382,130,170,73],
+        [0,78,441,174,170,94], [0,420,382,224,208,95], [0,895,371,80,105,63],
+        [0,236,242,37,69,54], [0,635,433,50,57,57], [0,844,297,67,103,60],
+        [1,524,469,154,148,91], [1,791,366,134,132,89], [1,676,375,121,130,94],
+        [1,646,473,108,128,76], [1,740,471,136,139,96],
+        [2,0,539,56,75,78], [2,43,547,83,72,93], [2,233,539,81,75,90], [2,411,535,79,77,94],
+        [2,832,539,79,80,88], [2,863,468,81,87,96], [2,908,540,67,79,83], [2,943,465,32,79,68]
+      ]
+    };
+    let classes, rows, results, candidates, panel, settings, tab, collapsed, hint, hovered, busy, invalid, retryLocked, selected, saved, zoom, searchTimer;
+    let panX = 0, panY = 0, drag, didPan = false;
+    const matchedPreset = name => presets.find(preset => preset.name.toLowerCase() === name.toLowerCase());
+    const newRow = className => ({ className, text: className });
+    const getClass = name => classes.find(item => item.name === name);
+    const incomplete = () => rows.some(row => !row.className || !row.text.trim());
+    const fruitScene = () => classes.length > 1 || classes.some(item => item.preset === presets[1] || item.preset === presets[2]);
+
+    function node(tag, className, value) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (value) element.textContent = value;
+      return element;
+    }
+
+    function control(className, value, label) {
+      const button = node('button', className, value);
+      button.type = 'button';
+      if (label) button.setAttribute('aria-label', label);
+      return button;
+    }
+
+    function icon(source) {
+      const image = node('img');
+      image.alt = '';
+      image.src = source;
+      return image;
+    }
+
+    function dot(name) {
+      const item = getClass(name);
+      const mark = node(item?.icon ? 'img' : 'span', 'dot');
+      if (item?.icon) {
+        mark.alt = '';
+        mark.src = item.icon;
+      } else if (item) {
+        mark.style.setProperty('--dot', item.color);
+      }
+      return mark;
+    }
+
+    function classSelect(value, label, change, emptyOption = false) {
+      const wrapper = node('span', 'select');
+      const select = node('select');
+      select.setAttribute('aria-label', label);
+      if (emptyOption) select.append(new Option('Выберите класс', ''));
+      for (const item of classes) select.append(new Option(item.name, item.name));
+      select.value = value;
+      wrapper.append(select, dot(value));
+      select.onchange = () => {
+        wrapper.lastChild.replaceWith(dot(select.value));
+        change(select.value);
+      };
+      return wrapper;
+    }
+
+    function chooseClass(row, name) {
+      if (row.className !== name) Object.assign(row, newRow(name));
+    }
+
+    function renderRows() {
+      $('rows').replaceChildren(...rows.map((row, index) => {
+        const fieldset = node('fieldset', 'request');
+        fieldset.setAttribute('aria-label', `Запрос ${index + 1}`);
+        fieldset.disabled = busy;
+        const classLabel = node('label', '', 'Класс');
+        const select = classSelect(row.className, `Класс ${index + 1}`, className => {
+          chooseClass(row, className);
+          input.value = row.text;
+          afterEdit();
+          renderClassList();
+        }, true);
+        classLabel.append(select);
+        const promptLabel = node('label', '', 'Промпт');
+        const input = node('textarea');
+        input.setAttribute('aria-label', `Промпт ${index + 1}`);
+        input.placeholder = 'Введите описание объекта для поиска';
+        input.value = row.text;
+        input.rows = 2;
+        input.oninput = () => {
+          row.text = input.value;
+          afterEdit();
+        };
+        promptLabel.append(input);
+        fieldset.append(classLabel, promptLabel);
+        return fieldset;
+      }));
+      updatePrompt();
+    }
+
+    function updatePrompt() {
+      $('prompt').dataset.busy = busy;
+      $('prompt-title').textContent = classes.length ? 'Разметка по промпту' : 'Разметка по тексту';
+      $('prompt-description').textContent = classes.length
+        ? 'Выберите класс и укажите в поле текстовое описание объекта для поиска'
+        : 'Создайте класс для начала работы';
+      $('add-query').hidden = !classes.length;
+      $('add-query').disabled = busy;
+      $('close-prompt').disabled = busy;
+      $('start').disabled = !classes.length || busy || retryLocked;
+      $('start-label').textContent = busy ? 'Поиск объектов…' : 'Начать разметку';
+      $('start-icon').src = busy ? icons.loading : icons.spark;
+      $('start-icon').classList.toggle('spinning', busy);
+      $('invalid').hidden = !invalid;
+      [...$('rows').children].forEach((fields, i) => {
+        fields.querySelector('select').setAttribute('aria-invalid', Boolean(invalid && !rows[i].className));
+        fields.querySelector('textarea').setAttribute('aria-invalid', Boolean(invalid && !rows[i].text.trim()));
+      });
+    }
+
+    function afterEdit() {
+      $('not-found').textContent = '';
+      retryLocked = false;
+      if (!incomplete()) invalid = false;
+      updatePrompt();
+      updateGuide();
+    }
+
+    function updateGuide() {
+      const message = saved ? 'Разметка сохранена в этой демонстрации.'
+        : busy ? 'Ищем объекты на изображении…'
+        : settings ? 'Настройте пороги и разметьте найденные объекты.'
+        : results.some(result => !result.confirmed) ? 'Подтвердите объекты по одному или все сразу.'
+        : results.length ? 'Сохраните подтверждённую разметку.'
+        : !panel ? 'Откройте «Разметка по тексту» на панели инструментов.'
+        : !classes.length ? 'Создайте класс «Арбуз». Для второго запроса добавьте «Дыню».'
+        : invalid ? 'Выберите класс и заполните промпт в каждой строке.'
+        : 'Начните разметку или уточните описание объекта в промпте.';
+      if ($('guide').textContent !== message) $('guide').textContent = message;
+      $('example').hidden = !panel || !classes.length || busy;
+    }
+
+    function updatePhoto() {
+      const image = fruitScene() ? 'fruit' : 'watermelon';
+      if ($('photo').dataset.image !== image) {
+        results = [];
+        candidates = [];
+        selected = null;
+        saved = false;
+        $('photo').src = photos[image];
+        $('photo').dataset.image = image;
+        $('photo').alt = image === 'fruit' ? 'Арбузы, дыни и яблоки на деревянном столе' : 'Арбузы на деревянном столе';
+      }
+    }
+
+    function renderSidebar() {
+      const empty = !classes.length;
+      const showingObjects = tab === 'objects';
+      $('sidebar').classList.toggle('empty', empty);
+      $('side-head').hidden = empty;
+      $('side-body').hidden = collapsed;
+      $('collapse').setAttribute('aria-expanded', !collapsed);
+      $('collapse').setAttribute('aria-label', collapsed ? 'Развернуть панель' : 'Свернуть панель');
+      $('collapse').firstElementChild.style.transform = collapsed ? 'rotate(180deg)' : '';
+      $('classes-tab').setAttribute('aria-pressed', !showingObjects);
+      $('objects-tab').setAttribute('aria-pressed', showingObjects);
+      $('classes').hidden = showingObjects;
+      $('objects').hidden = !showingObjects;
+      $('add-class').disabled = busy || settings;
+      $('add-class').classList.toggle('blue', empty);
+      $('add-class-icon').src = empty ? icons.whitePlus : icons.bluePlus;
+      $('class-list').hidden = empty;
+      renderClassList();
+      renderObjects();
+    }
+
+    function renderClassList() {
+      $('class-list').replaceChildren(...classes.map(item => {
+        const classRow = node('div', 'class-row');
+        const button = control('class-item');
+        button.append(dot(item.name), node('span', '', item.name));
+        button.setAttribute('aria-pressed', rows[0]?.className === item.name);
+        button.disabled = busy || settings;
+        button.onclick = () => {
+          chooseClass(rows[0], item.name);
+          renderRows();
+          afterEdit();
+          $('class-list').querySelector('[aria-pressed=true]')?.setAttribute('aria-pressed', 'false');
+          button.setAttribute('aria-pressed', 'true');
+        };
+        const actions = node('div', 'class-actions');
+        const edit = classAction(`Изменить класс «${item.name}»`, icons.classEdit);
+        edit.onclick = () => editClass(classRow, item);
+        const remove = classAction(`Удалить класс «${item.name}»`, icons.classDelete);
+        remove.onclick = () => removeClass(item);
+        actions.append(edit, remove);
+        classRow.append(button, actions);
+        return classRow;
+      }));
+    }
+
+    function classAction(label, source) {
+      const button = control('icon', '', label);
+      button.title = label;
+      button.disabled = busy;
+      button.append(icon(source));
+      return button;
+    }
+
+    function editClass(classRow, item) {
+      const form = node('form', 'class-edit');
+      const field = node('input');
+      field.setAttribute('aria-label', 'Название класса');
+      field.required = true;
+      field.maxLength = 40;
+      field.value = item.name;
+      const confirm = classAction('Подтвердить изменение', icons.classConfirm);
+      confirm.type = 'submit';
+      form.append(dot(item.name), field, confirm);
+      classRow.dataset.editing = '';
+      classRow.replaceChildren(form);
+      field.focus();
+      field.setSelectionRange(field.value.length, field.value.length);
+      const focusClass = () => [...$('class-list').querySelectorAll('.class-item')].find(button => button.textContent === item.name)?.focus();
+      field.oninput = () => field.setCustomValidity('');
+      field.onkeydown = event => {
+        if (event.key !== 'Escape') return;
+        renderClassList();
+        focusClass();
+      };
+      form.onsubmit = event => {
+        event.preventDefault();
+        const name = field.value.trim();
+        if (!name || classes.some(entry => entry !== item && entry.name.toLowerCase() === name.toLowerCase())) {
+          field.setCustomValidity(name ? 'Класс с таким названием уже есть' : 'Введите название класса');
+          field.reportValidity();
+          return;
+        }
+        const oldName = item.name;
+        item.name = name;
+        for (const row of rows.filter(row => row.className === oldName)) {
+          row.className = name;
+          if (row.text === oldName) row.text = name;
+        }
+        for (const result of results.filter(result => result.className === oldName)) result.className = name;
+        for (const candidate of candidates.filter(result => result.className === oldName)) candidate.className = name;
+        if (name !== oldName && results.some(result => result.className === name)) saved = false;
+        renderRows();
+        renderSidebar();
+        updateGuide();
+        focusClass();
+      };
+    }
+
+    function removeClass(item) {
+      const wasFruit = fruitScene();
+      const previousCount = results.length;
+      classes = classes.filter(entry => entry !== item);
+      rows = rows.filter(row => row.className !== item.name);
+      if (!classes.length) rows = [];
+      else if (!rows.length) rows.push(newRow(classes[0].name));
+      results = fruitScene() === wasFruit ? results.filter(result => result.className !== item.name) : [];
+      candidates = candidates.filter(result => result.className !== item.name);
+      if (results.length !== previousCount) saved = false;
+      updatePhoto();
+      renderRows();
+      afterEdit();
+      renderSidebar();
+      syncPanels();
+      $('add-class').focus();
+    }
+
+    function overlapRatio(a, b) {
+      const width = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+      const height = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+      return 100 * width * height / (a.w * a.h + b.w * b.h - width * height);
+    }
+
+    function previewResults() {
+      const accuracy = Number($('accuracy').value);
+      const minimumOverlap = 100 - Number($('overlap').value);
+      const remaining = candidates.filter(result => result.score >= accuracy);
+      const groups = [];
+      while (remaining.length) {
+        const group = [remaining.shift()];
+        for (const item of group) {
+          for (let index = remaining.length - 1; index >= 0; index--) {
+            const next = remaining[index];
+            const intersection = overlapRatio(item, next);
+            if (item.className === next.className && intersection > 0 && intersection >= minimumOverlap) {
+              group.push(...remaining.splice(index, 1));
+            }
+          }
+        }
+        const x = Math.min(...group.map(item => item.x));
+        const y = Math.min(...group.map(item => item.y));
+        groups.push({
+          id: group.map(item => item.id).sort().join('+'), members: group.map(item => item.id),
+          x, y, w: Math.max(...group.map(item => item.x + item.w)) - x,
+          h: Math.max(...group.map(item => item.y + item.h)) - y,
+          score: Math.max(...group.map(item => item.score)), className: group[0].className, confirmed: false
+        });
+      }
+      return groups;
+    }
+
+    function setHighlight(id) {
+      for (const box of $('boxes').children) box.toggleAttribute('data-highlighted', box.dataset.id === id);
+    }
+
+    function selectObject(id) {
+      selected = selected === id ? null : id;
+      if (selected && (tab !== 'objects' || collapsed)) {
+        tab = 'objects';
+        collapsed = false;
+        renderSidebar();
+      }
+      for (const box of $('boxes').children) box.setAttribute('aria-pressed', box.dataset.id === selected);
+      for (const row of $('object-list').querySelectorAll('.object-item')) {
+        const active = row.dataset.id === selected;
+        row.dataset.selected = active;
+        row.querySelector('.object-swatch')?.setAttribute('aria-pressed', active);
+        if (active) row.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function removePreview(result) {
+      candidates = candidates.filter(item => !result.members.includes(item.id));
+    }
+
+    function confirmObject(result) {
+      if (!results.includes(result)) {
+        removePreview(result);
+        results.push(result);
+      }
+      result.confirmed = true;
+      saved = false;
+      renderObjects();
+      updateGuide();
+    }
+
+    function renderObjects() {
+      const preview = previewResults();
+      const visible = [...results.filter(result => result.confirmed), ...results.filter(result => !result.confirmed), ...preview];
+      const list = $('object-list');
+      const scroll = list.scrollTop;
+      $('boxes').replaceChildren(...visible.map(result => {
+        const item = getClass(result.className);
+        const label = settings && !result.confirmed ? `${result.className} (${result.score}%)` : result.className;
+        const box = control('box', '', label);
+        box.dataset.id = result.id;
+        box.dataset.confirmed = result.confirmed;
+        box.setAttribute('aria-pressed', selected === result.id);
+        box.style.cssText = `left:${result.x / 975 * 100}%;top:${result.y / 749 * 100}%;width:${result.w / 975 * 100}%;height:${result.h / 749 * 100}%;--stroke:${result.confirmed ? item.solidColor : item.color}`;
+        box.append($('box-selection').content.cloneNode(true), node('span', 'box-label', label));
+        box.onclick = () => selectObject(result.id);
+        return box;
+      }));
+      list.replaceChildren(...visible.map(result => {
+        const entry = node('div', 'object-item');
+        entry.dataset.id = result.id;
+        entry.dataset.confirmed = result.confirmed;
+        entry.dataset.selected = selected === result.id;
+        const symbol = node('span', 'object-spark');
+        if (result.confirmed) {
+          const swatch = control('object-swatch', '', `Выбрать объект: ${result.className}`);
+          swatch.style.setProperty('--object-color', getClass(result.className).solidColor);
+          swatch.setAttribute('aria-pressed', selected === result.id);
+          swatch.onclick = () => selectObject(result.id);
+          symbol.append(swatch);
+          entry.onclick = event => {
+            if (!event.target.closest('button,select')) selectObject(result.id);
+          };
+        } else {
+          symbol.setAttribute('aria-hidden', 'true');
+          symbol.append(icon(icons.objectSpark));
+        }
+        const change = classSelect(result.className, `Класс объекта (${result.score}%)`, name => {
+          result.className = name;
+          for (const item of candidates.filter(item => result.members.includes(item.id))) item.className = name;
+          if (result.confirmed) saved = false;
+          renderObjects();
+          updateGuide();
+        });
+        entry.append(symbol, change);
+        if (!result.confirmed) {
+          const confirm = control('icon confirm', '', `Подтвердить ${result.className} (${result.score}%)`);
+          confirm.append(icon(icons.confirm));
+          confirm.onclick = () => confirmObject(result);
+          entry.append(confirm);
+        }
+        const remove = control('icon delete', '', `Удалить ${result.className} (${result.score}%)`);
+        remove.append(icon(result.confirmed ? icons.hoverDelete : icons.delete));
+        remove.onclick = () => {
+          results = results.filter(item => item !== result);
+          removePreview(result);
+          if (selected === result.id) selected = null;
+          if (result.confirmed) saved = false;
+          renderObjects();
+          updateGuide();
+        };
+        entry.append(remove);
+        entry.onmouseenter = () => setHighlight(result.id);
+        entry.onmouseleave = () => setHighlight(null);
+        entry.onfocusin = () => setHighlight(result.id);
+        entry.onfocusout = event => { if (!entry.contains(event.relatedTarget)) setHighlight(null); };
+        return entry;
+      }));
+      list.scrollTop = scroll;
+      if (!visible.length) list.append(node('p', '', settings ? 'Нет объектов при этих порогах' : 'Нет объектов для разметки'));
+      $('confirm-all').hidden = !visible.some(result => !result.confirmed);
+      $('apply-results').disabled = !preview.length;
+      const count = preview.length;
+      const word = new Intl.PluralRules('ru').select(count);
+      $('apply-label').textContent = count ? `Разметить ${count} ${word === 'one' ? 'найденный объект' : word === 'few' ? 'найденных объекта' : 'найденных объектов'}` : 'Нет объектов при этих порогах';
+      updateSaveStatus();
+    }
+
+    function syncPanels() {
+      $('prompt').hidden = !panel;
+      $('result-settings').hidden = !settings;
+      $('terminal').setAttribute('aria-pressed', panel || settings);
+      $('tooltip').hidden = panel || settings || !(hint || hovered);
+      $('cross').hidden = !panel || !classes.length;
+      updateGuide();
+    }
+
+    function updateSaveStatus() {
+      const button = $('save');
+      button.toggleAttribute('data-saved', saved);
+      button.textContent = saved ? 'Сохранено' : 'Сохранить';
+      button.disabled = saved || !results.some(result => result.confirmed);
+    }
+
+    function setZoom(value) {
+      zoom = Math.min(200, Math.max(50, value));
+      $('scene').style.setProperty('--scale', zoom / 100);
+      $('zoom-value').textContent = `${zoom}%`;
+      $('zoom-value').setAttribute('aria-label', `Масштаб ${zoom}%. Сбросить масштаб и положение`);
+      setPan(panX, panY);
+    }
+
+    function setPan(x, y) {
+      const scene = $('scene');
+      const canvas = $('canvas');
+      const width = scene.offsetWidth;
+      const height = scene.offsetHeight;
+      const extraX = width * (zoom / 100 - 1) / 2;
+      const extraY = height * (zoom / 100 - 1) / 2;
+      const visible = 48;
+      panX = Math.max(visible - scene.offsetLeft - width - extraX, Math.min(x, canvas.clientWidth - visible - scene.offsetLeft + extraX));
+      panY = Math.max(visible - scene.offsetTop - height - extraY, Math.min(y, canvas.clientHeight - visible - scene.offsetTop + extraY));
+      scene.style.setProperty('--pan-x', `${panX}px`);
+      scene.style.setProperty('--pan-y', `${panY}px`);
+    }
+
+    function setPanMode(enabled) {
+      $('hand').setAttribute('aria-pressed', enabled);
+      $('canvas').dataset.pan = enabled;
+    }
+
+    function resetView() {
+      panX = panY = 0;
+      setZoom(100);
+    }
+
+    function reset() {
+      clearTimeout(searchTimer);
+      $('not-found').textContent = '';
+      classes = [];
+      rows = [];
+      results = [];
+      candidates = [];
+      panel = settings = collapsed = hovered = busy = invalid = retryLocked = saved = false;
+      hint = true;
+      selected = null;
+      tab = 'classes';
+      setRange('accuracy', 80);
+      setRange('overlap', 20);
+      setPanMode(true);
+      resetView();
+      updatePhoto();
+      renderRows();
+      renderSidebar();
+      syncPanels();
+    }
+
+    function addClass(name) {
+      const existing = classes.find(item => item.name.toLowerCase() === name.toLowerCase());
+      if (existing) return existing.name;
+      const preset = matchedPreset(name);
+      const item = preset ? { ...preset, preset } : { name, color: '#bfbcff', solidColor: '#827cf4' };
+      classes.push(item);
+      if (!rows.length) rows.push(newRow(item.name));
+      return item.name;
+    }
+
+    const classDialog = $('class-dialog');
+    $('add-class').onclick = () => {
+      $('class-form').reset();
+      $('presets').replaceChildren(...presets.filter(preset => !getClass(preset.name)).map(preset => {
+        const button = control('', preset.name);
+        button.onclick = () => { $('class-name').value = preset.name; $('class-form').requestSubmit(); };
+        return button;
+      }));
+      classDialog.showModal();
+      $('class-name').focus();
+    };
+    classDialog.querySelector('[data-close]').onclick = () => classDialog.close();
+    $('class-form').onsubmit = event => {
+      event.preventDefault();
+      const name = $('class-name').value.trim();
+      if (!name) { $('class-name').value = ''; $('class-name').reportValidity(); return; }
+      const added = addClass(name);
+      const emptyRow = rows.find(row => !row.className);
+      if (emptyRow) chooseClass(emptyRow, added);
+      classDialog.close();
+      updatePhoto();
+      renderRows();
+      afterEdit();
+      renderSidebar();
+      syncPanels();
+    };
+
+    $('terminal').onmouseenter = () => { hovered = true; syncPanels(); };
+    $('terminal').onmouseleave = () => { hovered = false; syncPanels(); };
+    $('terminal').onfocus = () => { hovered = true; syncPanels(); };
+    $('terminal').onblur = () => { hovered = false; syncPanels(); };
+    $('terminal').onclick = () => {
+      if (busy) return;
+      hint = false;
+      panel = !panel;
+      if (settings) candidates = [];
+      settings = false;
+      renderObjects();
+      syncPanels();
+    };
+    $('close-prompt').onclick = () => { panel = false; syncPanels(); $('terminal').focus(); };
+    $('add-query').onclick = () => {
+      rows.push(newRow(classes.length === 1 ? classes[0].name : ''));
+      renderRows();
+      $('not-found').textContent = '';
+      $('rows').lastChild.querySelector(classes.length === 1 ? 'textarea' : 'select').focus();
+    };
+    $('example').onclick = () => {
+      const assigned = new Set(rows.map(row => row.className).filter(Boolean));
+      for (const row of rows) {
+        if (!row.className) {
+          chooseClass(row, (classes.find(item => !assigned.has(item.name)) ?? classes[0]).name);
+          assigned.add(row.className);
+        }
+        if (!row.text.trim() || row.text === row.className) row.text = getClass(row.className).example ?? row.className;
+      }
+      renderRows();
+      afterEdit();
+    };
+
+    // shortcut: fixed detections for the supplied demo photos, replace with model output for real annotation.
+    function detect() {
+      const queries = rows.map(row => {
+        const kind = presets.findIndex(item => item.pattern.test(row.className) && item.pattern.test(row.text));
+        return { kind, className: row.className };
+      });
+      const scene = fruitScene() ? 'fruit' : 'watermelon';
+      const applied = new Set(results.flatMap(result => result.members));
+      return geometry[scene].flatMap(([kind, x, y, w, h, score], index) => {
+        const query = queries.find(item => item.kind === kind);
+        const id = `${scene}/${index}`;
+        return query && !applied.has(id) ? [{ id, x, y, w, h, score, className: query.className }] : [];
+      });
+    }
+
+    $('prompt').onsubmit = event => {
+      event.preventDefault();
+      if (busy || !classes.length || retryLocked) return;
+      $('not-found').textContent = '';
+      if (incomplete()) {
+        invalid = retryLocked = true;
+        updatePrompt();
+        updateGuide();
+        return;
+      }
+      busy = true;
+      renderRows();
+      renderSidebar();
+      updateGuide();
+      searchTimer = setTimeout(() => {
+        candidates = detect();
+        busy = false;
+        if (!candidates.length) {
+          renderRows();
+          renderSidebar();
+          syncPanels();
+          $('not-found').textContent = 'Объекты не найдены';
+          return;
+        }
+        panel = false;
+        settings = true;
+        setRange('accuracy', 80);
+        setRange('overlap', 20);
+        selected = null;
+        collapsed = false;
+        tab = 'objects';
+        renderRows();
+        renderSidebar();
+        syncPanels();
+        $('settings-title').setAttribute('tabindex', '-1');
+        $('settings-title').focus({ preventScroll: true });
+      }, 850);
+    };
+
+    function applyPreview() {
+      results.push(...previewResults().map(result => ({ ...result, confirmed: true })));
+      candidates = [];
+      settings = false;
+      saved = false;
+      renderObjects();
+      syncPanels();
+    }
+
+    $('classes-tab').onclick = () => { tab = 'classes'; renderSidebar(); };
+    $('objects-tab').onclick = () => { tab = 'objects'; renderSidebar(); };
+    $('collapse').onclick = () => { collapsed = !collapsed; renderSidebar(); };
+    function setRange(id, value) {
+      $(id).value = value;
+      $(id).style.setProperty('--value', `${value}%`);
+      $(`${id}-value`).textContent = `${value}%`;
+    }
+    for (const id of ['accuracy', 'overlap']) {
+      $(id).oninput = () => {
+        setRange(id, $(id).value);
+        renderObjects();
+      };
+    }
+    $('apply-results').onclick = applyPreview;
+    $('confirm-all').onclick = () => {
+      results.forEach(result => { result.confirmed = true; });
+      applyPreview();
+    };
+    function cancelPreview() {
+      candidates = [];
+      settings = false;
+      panel = !results.length;
+      tab = panel ? 'classes' : 'objects';
+      renderSidebar();
+      syncPanels();
+    }
+    $('close-settings').onclick = $('cancel-results').onclick = cancelPreview;
+    $('save').onclick = () => { saved = true; updateSaveStatus(); updateGuide(); };
+    $('zoom-in').onclick = () => setZoom(zoom + 10);
+    $('zoom-out').onclick = () => setZoom(zoom - 10);
+    $('zoom-value').onclick = resetView;
+    const canvas = $('canvas');
+    $('hand').onclick = () => setPanMode(canvas.dataset.pan !== 'true');
+    canvas.onclick = event => {
+      if (selected && !didPan && !event.target.closest('.box')) selectObject(null);
+    };
+    canvas.onpointerdown = event => {
+      if (!event.isPrimary || event.button !== 0) return;
+      didPan = false;
+      if (canvas.dataset.pan !== 'true') return;
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, panX, panY };
+    };
+    canvas.onpointermove = event => {
+      if (drag?.id !== event.pointerId) return;
+      const x = event.clientX - drag.x;
+      const y = event.clientY - drag.y;
+      if (!canvas.hasPointerCapture(event.pointerId)) {
+        if (Math.hypot(x, y) < 4) return;
+        canvas.setPointerCapture(event.pointerId);
+        didPan = true;
+        canvas.toggleAttribute('data-dragging', true);
+      }
+      const fit = canvas.getBoundingClientRect().width / canvas.offsetWidth;
+      setPan(drag.panX + x / fit, drag.panY + y / fit);
+    };
+    canvas.onpointerup = canvas.onpointercancel = canvas.onlostpointercapture = event => {
+      if (drag?.id !== event.pointerId) return;
+      drag = undefined;
+      canvas.removeAttribute('data-dragging');
+    };
+    canvas.onpointerleave = event => {
+      if (drag?.id === event.pointerId && !canvas.hasPointerCapture(event.pointerId)) drag = undefined;
+    };
+    const arrowMoves = { ArrowLeft: [-32, 0], ArrowRight: [32, 0], ArrowUp: [0, -32], ArrowDown: [0, 32] };
+    canvas.onkeydown = event => {
+      const move = arrowMoves[event.key];
+      if (event.target !== canvas || canvas.dataset.pan !== 'true' || !move) return;
+      event.preventDefault();
+      setPan(panX + move[0], panY + move[1]);
+    };
+    $('reset').onclick = reset;
+    $('fullscreen').hidden = !document.fullscreenEnabled;
+    $('fullscreen').onclick = async () => {
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await document.documentElement.requestFullscreen();
+      } catch {
+        $('fullscreen').hidden = true;
+      }
+    };
+    document.onfullscreenchange = () => {
+      $('fullscreen').textContent = document.fullscreenElement ? 'Выйти из полного экрана' : 'На весь экран';
+    };
+    function fit() {
+      const headerHeight = document.querySelector('.demo').offsetHeight;
+      document.documentElement.style.setProperty('--fit', Math.min(1, (innerWidth - 24) / 1120, Math.max(0.58, (innerHeight - headerHeight) / 1080)));
+      setPan(panX, panY);
+    }
+    new ResizeObserver(fit).observe(document.querySelector('.demo'));
+    addEventListener('resize', fit);
+    reset();
+    fit();
+  </script>
+</body>
+</html>
