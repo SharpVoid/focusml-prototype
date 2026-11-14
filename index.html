@@ -30,13 +30,17 @@
     .heading{height:36px;margin-bottom:7px;display:flex;align-items:center;gap:12px}
     .heading h1{font-size:20px;line-height:24px;letter-spacing:-.3px;font-weight:600;margin:0}
     .mode{display:flex;align-items:center;gap:12px;margin-left:auto;padding-right:10px;color:var(--muted);font-size:18px;font-weight:600}
-    .workspace{position:relative;height:914px;border:1px solid var(--line);border-radius:8px;background:#f5f8fb}
+    .workspace{--ease-out:cubic-bezier(0.23,1,0.32,1);position:relative;height:914px;border:1px solid var(--line);border-radius:8px;background:#f5f8fb}
     .canvas{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
     .canvas[data-pan=true]{cursor:grab;touch-action:none}
     .canvas[data-pan=true] .box{cursor:inherit}
     .canvas[data-dragging]{cursor:grabbing}
-    #scene{position:absolute;left:87px;top:80px;width:975px;height:749px;transform:translate(var(--pan-x,0px),var(--pan-y,0px)) scale(var(--scale,1));user-select:none}
+    #scene{position:absolute;left:87px;top:80px;width:975px;height:749px;transform:translate(0,0);user-select:none}
     #photo{width:100%;height:100%;object-fit:cover;border:1px solid var(--line);border-radius:8px;background:#eaf0f3}
+    .photo-shade{position:absolute;inset:1px;overflow:hidden;border-radius:7px;pointer-events:none;z-index:1;opacity:0}
+    .photo-shade[data-visible]{opacity:1}
+    #shade{position:absolute;inset:0;background:#0005}
+    .workspace[data-motion] .photo-shade{transition:opacity 125ms var(--ease-out)}
     .icon,.action{display:inline-flex;justify-content:center;align-items:center;gap:7px;font-weight:500}
     .icon{width:36px;height:36px;flex:none;color:var(--blue)}
     button.icon:hover:not(:disabled){background:var(--pale)}
@@ -50,6 +54,8 @@
     .tools .hand[aria-pressed=false]:not(:hover,:focus-visible) img{filter:brightness(0) saturate(100%) invert(26%) sepia(84%) saturate(1397%) hue-rotate(168deg) brightness(90%) contrast(101%)}
     #terminal{width:32px;height:32px;margin:3px 0}
     #terminal:hover,#terminal:focus-visible{background:var(--lilac)}
+    #terminal[data-next]{background:var(--lilac);box-shadow:0 0 0 1px #c7d2fe}
+    #terminal[aria-pressed=true]{box-shadow:none}
     #terminal[aria-pressed=true]{background:var(--violet)}
     #terminal[aria-pressed=false] .active-icon,#terminal[aria-pressed=true] .inactive-icon{display:none}
     .paging{position:absolute;bottom:19px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px}
@@ -57,11 +63,13 @@
     .pagination strong{font-weight:500;border:1px solid #80d1ff;color:#0f172a;border-radius:9px;padding:5px 9px;margin-right:7px}
     .action{min-height:36px;padding:0 12px;white-space:nowrap}
     #save{min-width:108px;font-weight:600}
+    .workspace[data-motion] #save{transition:background-color 125ms var(--ease-out),color 125ms var(--ease-out),box-shadow 125ms var(--ease-out)}
     #save[data-saved]{background:#f0f9ff;color:#075985;box-shadow:0 0 0 1px #bae6fd;opacity:1}
     .blue{background:var(--sky);color:white}
     .blue:hover:not(:disabled){background:#008bc4}
     .primary{background:var(--violet);color:white;width:100%}
     .primary:hover:not(:disabled){background:#5354de}
+    .settings .primary:disabled{background:var(--lilac);color:var(--indigo);opacity:.65}
     .quiet{background:var(--lilac);color:var(--indigo)}
     .quiet:hover:not(:disabled){background:#e2e5ff}
     .avatar{position:absolute;left:-87px;bottom:40px;width:50px;height:49px;display:grid;place-items:center;color:var(--blue);font-size:20px;background:url('data:image/png;base64,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') center / contain no-repeat}
@@ -75,8 +83,8 @@
     .tooltip p{font-size:12px;line-height:16px}
     .workspace:has(.tooltip:not([hidden])) #terminal{background:var(--lilac)}
     .card p{margin:4px 0 0;color:var(--muted)}
-    .prompt{position:absolute;left:80px;top:475px;transform:translateY(-50%);width:344px;z-index:4}
-    #rows{display:grid;gap:16px;max-height:448px;overflow:auto;margin-top:16px;padding:2px;margin-inline:-2px}
+    .prompt{position:absolute;left:80px;top:260px;width:344px;max-height:calc(100% - 280px);display:flex;flex-direction:column;z-index:4;transform-origin:left 215px}
+    #rows{display:grid;gap:16px;min-height:0;max-height:448px;overflow:auto;margin-top:16px;padding:2px;margin-inline:-2px}
     #rows:empty{display:none}
     .request{min-width:0;margin:0;padding:0;border:0;display:grid;gap:9px}
     .request label{display:grid;gap:3px;font-size:12px;font-weight:600}
@@ -136,6 +144,8 @@
     .object-item[data-confirmed=true]:is(:hover,:focus-within,[data-selected=true]) .delete{opacity:1;pointer-events:auto}
     @media(hover:none){.object-item[data-confirmed=true] .delete{opacity:1;pointer-events:auto}}
     .confirm-all{margin-top:12px}
+    .sidebar[data-preview] .confirm-all{background:transparent}
+    .sidebar[data-preview] .confirm-all:hover{background:var(--pale)}
     .settings{position:absolute;bottom:29px;right:22px;width:355px;z-index:4}
     .ranges{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin:12px 0 16px}
     .ranges label{display:grid;grid-template-columns:1fr auto;gap:3px}
@@ -144,15 +154,17 @@
     input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;border:1px solid var(--violet);background:#fff}
     input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;border:1px solid var(--violet);background:#fff}
     .settings .action{width:100%;min-height:28px}
+    .settings .primary:not(:disabled) img{filter:brightness(0) invert(1)}
     .cancel{margin-top:4px;border:1px solid #f4f5f7;color:#ed242a}
     .box{position:absolute;border:2px dashed var(--stroke);background:color-mix(in srgb,var(--stroke) 9%,transparent);border-radius:0}
     .box[aria-pressed=false]:hover:not([data-confirmed=true]){outline:1px solid var(--stroke);outline-offset:2px}
     .box[data-confirmed=true]{border-style:solid}
     .box[aria-pressed=true]{border-color:transparent}
-    .box-selection{display:none;position:absolute;inset:-1px;width:calc(100% + 2px);height:calc(100% + 2px);overflow:visible;pointer-events:none;fill:none;stroke:var(--stroke);stroke-width:2;stroke-dasharray:5 5;animation:march 600ms linear infinite}
+    .box-selection{display:none;position:absolute;inset:-1px;width:calc(100% + 2px);height:calc(100% + 2px);overflow:visible;pointer-events:none;fill:none;stroke:var(--stroke);stroke-width:2;stroke-dasharray:5 5}
     .box[aria-pressed=true] .box-selection{display:block}
+    .workspace[data-motion] .box[aria-pressed=true] .box-selection{animation:march 600ms linear 2}
     @keyframes march{to{stroke-dashoffset:-10}}
-    .box[data-highlighted]{z-index:1;box-shadow:0 0 0 200vmax #0005}
+    .box[data-highlighted]{z-index:2}
     .box .box-label{position:absolute;bottom:100%;left:0;white-space:nowrap;background:var(--stroke);font-size:10px;line-height:20px;padding:0 4px;color:#0c1721}
     .cross{position:absolute;left:276px;top:397px;pointer-events:none}
     dialog{padding:20px;width:min(360px,calc(100vw - 28px));border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 45px #0f172a30}
@@ -164,6 +176,20 @@
     .dialog-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
     .dialog-footer button{min-height:36px;padding:0 12px}
     .dialog-footer [data-close]{background:#f5f8fb}
+    @media(min-width:701px){
+      .workspace[data-motion] :is(.prompt,.settings){transition:opacity 125ms var(--ease-out),transform 125ms var(--ease-out),display 125ms allow-discrete}
+      .workspace[data-motion] .prompt:not([hidden]){transition-duration:160ms}
+      .workspace[data-motion] .settings:not([hidden]){transition-duration:180ms;transition-delay:30ms,30ms,0ms}
+      .workspace[data-motion] :is(.prompt,.settings)[hidden]{display:none!important;opacity:0;pointer-events:none}
+      .workspace[data-motion] .prompt[hidden]{transform:scale(.97)}
+      .workspace[data-motion] .settings[hidden]{transform:translateY(6px)}
+      @starting-style{
+        .workspace[data-motion] .prompt:not([hidden]){opacity:0;transform:scale(.97)}
+        .workspace[data-motion] .settings:not([hidden]){opacity:0;transform:translateY(6px)}
+      }
+    }
+    .workspace[data-motion] #boxes[data-arriving]{animation:show-boxes 150ms var(--ease-out)}
+    @keyframes show-boxes{from{opacity:0}}
     @media(max-width:700px){
       .demo{align-items:flex-start;flex-wrap:wrap;gap:6px;padding:8px 12px}
       .demo-info{align-items:flex-start;gap:8px;font-size:13px}
@@ -182,6 +208,7 @@
       .tools button:disabled,.tools hr{display:none}
       #terminal{margin:0}
       .prompt,.sidebar,.settings{position:static;transform:none;width:100%;z-index:auto}
+      .prompt{max-height:none}
       .sidebar.empty{width:100%;min-height:0;padding:8px 11px}
       .sidebar{order:1}
       .prompt,.settings{order:2}
@@ -190,7 +217,10 @@
       .tooltip::before,.box .box-label,.cross{display:none}
       #rows{max-height:none}
     }
-    @media(prefers-reduced-motion:reduce){.spinning,.box-selection{animation:none}}
+    @media(prefers-reduced-motion:reduce){
+      .spinning,.workspace[data-motion] .box[aria-pressed=true] .box-selection{animation:none}
+      .workspace[data-motion] :is(.prompt,.settings){transform:none!important}
+    }
   </style>
 </head>
 <body>
@@ -208,7 +238,7 @@
       <div class="heading"><h1>Арбуз_0.jpg</h1><button class="mode" disabled>Детекция <img src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE2LjI1IiBoZWlnaHQ9IjE2LjI1IiB2aWV3Qm94PSIwIDAgMTYuMjUgMTYuMjUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSJJY29uIHdyYXBwZXIiPgo8cGF0aCBpZD0iUGl4ZWwgY29sb3Igb3ZlcnJpZGUgaGFjayIgZD0iTTEyLjY4MjIgNS4xODIxOEMxMi45MjYxIDQuOTM4MjUgMTMuMzIyOCA0LjkzODU0IDEzLjU2NjkgNS4xODIxOEMxMy44MTEgNS40MjYyNSAxMy44MTEgNS44MjI4NiAxMy41NjY5IDYuMDY2OTRMOC41NjY5NCAxMS4wNjY5QzguMzIyODYgMTEuMzExIDcuOTI2MjUgMTEuMzExIDcuNjgyMTggMTEuMDY2OUwyLjY4MjE4IDYuMDY2OTRDMi40Mzg1NCA1LjgyMjgzIDIuNDM4MjUgNS40MjYxMSAyLjY4MjE4IDUuMTgyMThDMi45MjYxMSA0LjkzODI1IDMuMzIyODMgNC45Mzg1NCAzLjU2Njk0IDUuMTgyMThMOC4xMjQ1NiA5LjczOTc5TDEyLjY4MjIgNS4xODIxOFoiIGZpbGw9IiM2NDc0OEIiLz4KPC9nPgo8L3N2Zz4K" alt=""></button></div>
       <div class="workspace">
         <div class="canvas" id="canvas" data-pan="true" tabindex="0" role="region" aria-label="Холст разметки" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight">
-          <div id="scene"><img id="photo" draggable="false" alt="Арбузы на деревянном столе"><div id="boxes"></div><img class="cross" id="cross" alt="" src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjExIiBoZWlnaHQ9IjEyIiB2aWV3Qm94PSIwIDAgMTEgMTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSJJY29uIC8gY3Jvc3MiIGNsaXAtcGF0aD0idXJsKCNjbGlwMF8wXzE5OTApIj4KPHBhdGggaWQ9IlZlY3RvciIgZD0iTTEuODMzMzMgNC41QzEuNTkwMjIgNC41IDEuMzU3MDYgNC42MDUzNiAxLjE4NTE1IDQuNzkyODlDMS4wMTMyNCA0Ljk4MDQzIDAuOTE2NjY3IDUuMjM0NzggMC45MTY2NjcgNS41VjYuNUMwLjkxNjY2NyA2Ljc2NTIyIDEuMDEzMjQgNy4wMTk1NyAxLjE4NTE1IDcuMjA3MTFDMS4zNTcwNiA3LjM5NDY0IDEuNTkwMjIgNy41IDEuODMzMzMgNy41SDMuNjY2NjdDMy43ODgyMiA3LjUgMy45MDQ4IDcuNTUyNjggMy45OTA3NiA3LjY0NjQ1QzQuMDc2NzEgNy43NDAyMSA0LjEyNSA3Ljg2NzM5IDQuMTI1IDhWMTBDNC4xMjUgMTAuMjY1MiA0LjIyMTU4IDEwLjUxOTYgNC4zOTM0OSAxMC43MDcxQzQuNTY1MzkgMTAuODk0NiA0Ljc5ODU1IDExIDUuMDQxNjcgMTFINS45NTgzM0M2LjIwMTQ1IDExIDYuNDM0NjEgMTAuODk0NiA2LjYwNjUxIDEwLjcwNzFDNi43Nzg0MiAxMC41MTk2IDYuODc1IDEwLjI2NTIgNi44NzUgMTBWOEM2Ljg3NSA3Ljg2NzM5IDYuOTIzMjkgNy43NDAyMSA3LjAwOTI0IDcuNjQ2NDVDNy4wOTUyIDcuNTUyNjggNy4yMTE3OCA3LjUgNy4zMzMzMyA3LjVIOS4xNjY2N0M5LjQwOTc4IDcuNSA5LjY0Mjk0IDcuMzk0NjQgOS44MTQ4NSA3LjIwNzExQzkuOTg2NzYgNy4wMTk1NyAxMC4wODMzIDYuNzY1MjIgMTAuMDgzMyA2LjVWNS41QzEwLjA4MzMgNS4yMzQ3OCA5Ljk4Njc2IDQuOTgwNDMgOS44MTQ4NSA0Ljc5Mjg5QzkuNjQyOTQgNC42MDUzNiA5LjQwOTc4IDQuNSA5LjE2NjY3IDQuNUg3LjMzMzMzQzcuMjExNzggNC41IDcuMDk1MiA0LjQ0NzMyIDcuMDA5MjQgNC4zNTM1NUM2LjkyMzI5IDQuMjU5NzkgNi44NzUgNC4xMzI2MSA2Ljg3NSA0VjJDNi44NzUgMS43MzQ3OCA2Ljc3ODQyIDEuNDgwNDMgNi42MDY1MSAxLjI5Mjg5QzYuNDM0NjEgMS4xMDUzNiA2LjIwMTQ1IDEgNS45NTgzMyAxSDUuMDQxNjdDNC43OTg1NSAxIDQuNTY1MzkgMS4xMDUzNiA0LjM5MzQ5IDEuMjkyODlDNC4yMjE1OCAxLjQ4MDQzIDQuMTI1IDEuNzM0NzggNC4xMjUgMlY0QzQuMTI1IDQuMTMyNjEgNC4wNzY3MSA0LjI1OTc5IDMuOTkwNzYgNC4zNTM1NUMzLjkwNDggNC40NDczMiAzLjc4ODIyIDQuNSAzLjY2NjY3IDQuNUgxLjgzMzMzWiIgZmlsbD0id2hpdGUiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZT0iIzQ3NTU2OSIvPgo8L2c+CjxkZWZzPgo8Y2xpcFBhdGggaWQ9ImNsaXAwXzBfMTk5MCI+CjxyZWN0IHdpZHRoPSIxMSIgaGVpZ2h0PSIxMiIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPC9kZWZzPgo8L3N2Zz4K" hidden></div>
+          <div id="scene"><img id="photo" draggable="false" alt="Арбузы на деревянном столе"><div class="photo-shade" aria-hidden="true"><div id="shade"></div></div><div id="boxes"></div><img class="cross" id="cross" alt="" src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjExIiBoZWlnaHQ9IjEyIiB2aWV3Qm94PSIwIDAgMTEgMTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSJJY29uIC8gY3Jvc3MiIGNsaXAtcGF0aD0idXJsKCNjbGlwMF8wXzE5OTApIj4KPHBhdGggaWQ9IlZlY3RvciIgZD0iTTEuODMzMzMgNC41QzEuNTkwMjIgNC41IDEuMzU3MDYgNC42MDUzNiAxLjE4NTE1IDQuNzkyODlDMS4wMTMyNCA0Ljk4MDQzIDAuOTE2NjY3IDUuMjM0NzggMC45MTY2NjcgNS41VjYuNUMwLjkxNjY2NyA2Ljc2NTIyIDEuMDEzMjQgNy4wMTk1NyAxLjE4NTE1IDcuMjA3MTFDMS4zNTcwNiA3LjM5NDY0IDEuNTkwMjIgNy41IDEuODMzMzMgNy41SDMuNjY2NjdDMy43ODgyMiA3LjUgMy45MDQ4IDcuNTUyNjggMy45OTA3NiA3LjY0NjQ1QzQuMDc2NzEgNy43NDAyMSA0LjEyNSA3Ljg2NzM5IDQuMTI1IDhWMTBDNC4xMjUgMTAuMjY1MiA0LjIyMTU4IDEwLjUxOTYgNC4zOTM0OSAxMC43MDcxQzQuNTY1MzkgMTAuODk0NiA0Ljc5ODU1IDExIDUuMDQxNjcgMTFINS45NTgzM0M2LjIwMTQ1IDExIDYuNDM0NjEgMTAuODk0NiA2LjYwNjUxIDEwLjcwNzFDNi43Nzg0MiAxMC41MTk2IDYuODc1IDEwLjI2NTIgNi44NzUgMTBWOEM2Ljg3NSA3Ljg2NzM5IDYuOTIzMjkgNy43NDAyMSA3LjAwOTI0IDcuNjQ2NDVDNy4wOTUyIDcuNTUyNjggNy4yMTE3OCA3LjUgNy4zMzMzMyA3LjVIOS4xNjY2N0M5LjQwOTc4IDcuNSA5LjY0Mjk0IDcuMzk0NjQgOS44MTQ4NSA3LjIwNzExQzkuOTg2NzYgNy4wMTk1NyAxMC4wODMzIDYuNzY1MjIgMTAuMDgzMyA2LjVWNS41QzEwLjA4MzMgNS4yMzQ3OCA5Ljk4Njc2IDQuOTgwNDMgOS44MTQ4NSA0Ljc5Mjg5QzkuNjQyOTQgNC42MDUzNiA5LjQwOTc4IDQuNSA5LjE2NjY3IDQuNUg3LjMzMzMzQzcuMjExNzggNC41IDcuMDk1MiA0LjQ0NzMyIDcuMDA5MjQgNC4zNTM1NUM2LjkyMzI5IDQuMjU5NzkgNi44NzUgNC4xMzI2MSA2Ljg3NSA0VjJDNi44NzUgMS43MzQ3OCA2Ljc3ODQyIDEuNDgwNDMgNi42MDY1MSAxLjI5Mjg5QzYuNDM0NjEgMS4xMDUzNiA2LjIwMTQ1IDEgNS45NTgzMyAxSDUuMDQxNjdDNC43OTg1NSAxIDQuNTY1MzkgMS4xMDUzNiA0LjM5MzQ5IDEuMjkyODlDNC4yMjE1OCAxLjQ4MDQzIDQuMTI1IDEuNzM0NzggNC4xMjUgMlY0QzQuMTI1IDQuMTMyNjEgNC4wNzY3MSA0LjI1OTc5IDMuOTkwNzYgNC4zNTM1NUMzLjkwNDggNC40NDczMiAzLjc4ODIyIDQuNSAzLjY2NjY3IDQuNUgxLjgzMzMzWiIgZmlsbD0id2hpdGUiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZT0iIzQ3NTU2OSIvPgo8L2c+CjxkZWZzPgo8Y2xpcFBhdGggaWQ9ImNsaXAwXzBfMTk5MCI+CjxyZWN0IHdpZHRoPSIxMSIgaGVpZ2h0PSIxMiIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPC9kZWZzPgo8L3N2Zz4K" hidden></div>
         </div>
         <div class="zoom" aria-label="Масштаб">
           <button class="icon" id="zoom-in" aria-label="Приблизить"><img src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE2LjI1IiBoZWlnaHQ9IjE2LjI1IiB2aWV3Qm94PSIwIDAgMTYuMjUgMTYuMjUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSJJY29uIHdyYXBwZXIiPgo8cGF0aCBpZD0iUGl4ZWwgY29sb3Igb3ZlcnJpZGUgaGFjayIgZD0iTTguMTI1IDEuNjY2OTlDOC40NzAxOCAxLjY2Njk5IDguNzUgMS45NDY4MSA4Ljc1IDIuMjkxOTlWNy41SDEzLjk1OUMxNC4zMDM5IDcuNTAwMzUgMTQuNTg0IDcuNzgwMDQgMTQuNTg0IDguMTI1QzE0LjU4NCA4LjQ2OTk2IDE0LjMwMzkgOC43NDk2NSAxMy45NTkgOC43NUg4Ljc1VjEzLjk1OUM4Ljc0OTY1IDE0LjMwMzkgOC40Njk5NiAxNC41ODQgOC4xMjUgMTQuNTg0QzcuNzgwMDQgMTQuNTg0IDcuNTAwMzUgMTQuMzAzOSA3LjUgMTMuOTU5VjguNzVIMi4yOTE5OUMxLjk0NjgxIDguNzUgMS42NjY5OSA4LjQ3MDE4IDEuNjY2OTkgOC4xMjVDMS42NjY5OSA3Ljc3OTgyIDEuOTQ2ODEgNy41IDIuMjkxOTkgNy41SDcuNVYyLjI5MTk5QzcuNSAxLjk0NjgxIDcuNzc5ODIgMS42NjY5OSA4LjEyNSAxLjY2Njk5WiIgZmlsbD0iIzA3NTk4NSIvPgo8L2c+Cjwvc3ZnPgo=" alt=""></button>
@@ -254,7 +284,7 @@
             <label>Точность <output id="accuracy-value">80%</output><input id="accuracy" type="range" min="0" max="100" value="80" title="Минимальная точность для новой рамки"></label>
             <label>Объединение <output id="overlap-value">20%</output><input id="overlap" type="range" min="0" max="100" value="20" title="Чем выше значение, тем легче объединяются пересекающиеся рамки одного класса"></label>
           </div>
-          <button class="action quiet" id="apply-results"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNSAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEzLjUxNjYgNC44NDk2MUMxMy43NjA3IDQuNjA1NTMgMTQuMTU3MyA0LjYwNTUzIDE0LjQwMTQgNC44NDk2MUMxNC42NDUzIDUuMDkzNyAxNC42NDU0IDUuNDkwMzQgMTQuNDAxNCA1LjczNDM4TDkuNDAxMzcgMTAuNzM0NEM5LjE1NzMzIDEwLjk3ODMgOC43NjA2NiAxMC45NzgzIDguNTE2NiAxMC43MzQ0TDcuNTE2NiA5LjczNDM4QzcuMjcyNTUgOS40OTAzMiA3LjI3MjYxIDkuMDkzNjkgNy41MTY2IDguODQ5NjFDNy43NjA2OCA4LjYwNTUzIDguMTU3MjkgOC42MDU1MyA4LjQwMTM3IDguODQ5NjFMOC45NTg5OCA5LjQwNzIzTDEzLjUxNjYgNC44NDk2MVpNMTAuODUwNiAyLjE4MjYyQzExLjA5NDYgMS45MzkwNSAxMS40OTA0IDEuOTM5IDExLjczNDQgMi4xODI2MkMxMS45NzgyIDIuNDI2NjIgMTEuOTc4MiAyLjgyMzMzIDExLjczNDQgMy4wNjczOEw0LjQwMTM3IDEwLjQwMDRDNC4xNTczOSAxMC42NDQ0IDMuNzYxNjggMTAuNjQ0MiAzLjUxNzU4IDEwLjQwMDRMMC4xODM1OTQgNy4wNjczOEMtMC4wNjA0ODM5IDYuODIzMzEgLTAuMDYwNDgzOSA2LjQyNjY5IDAuMTgzNTk0IDYuMTgyNjJDMC40Mjc2OTIgNS45Mzg3OCAwLjgyNDM2MyA1LjkzODYyIDEuMDY4MzYgNi4xODI2MkwzLjk1ODk4IDkuMDc0MjJMMTAuODUwNiAyLjE4MjYyWiIgZmlsbD0iIzRGNDZFNSIvPgo8L3N2Zz4K" alt=""><span id="apply-label"></span></button>
+          <button class="action primary" id="apply-results"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNSAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEzLjUxNjYgNC44NDk2MUMxMy43NjA3IDQuNjA1NTMgMTQuMTU3MyA0LjYwNTUzIDE0LjQwMTQgNC44NDk2MUMxNC42NDUzIDUuMDkzNyAxNC42NDU0IDUuNDkwMzQgMTQuNDAxNCA1LjczNDM4TDkuNDAxMzcgMTAuNzM0NEM5LjE1NzMzIDEwLjk3ODMgOC43NjA2NiAxMC45NzgzIDguNTE2NiAxMC43MzQ0TDcuNTE2NiA5LjczNDM4QzcuMjcyNTUgOS40OTAzMiA3LjI3MjYxIDkuMDkzNjkgNy41MTY2IDguODQ5NjFDNy43NjA2OCA4LjYwNTUzIDguMTU3MjkgOC42MDU1MyA4LjQwMTM3IDguODQ5NjFMOC45NTg5OCA5LjQwNzIzTDEzLjUxNjYgNC44NDk2MVpNMTAuODUwNiAyLjE4MjYyQzExLjA5NDYgMS45MzkwNSAxMS40OTA0IDEuOTM5IDExLjczNDQgMi4xODI2MkMxMS45NzgyIDIuNDI2NjIgMTEuOTc4MiAyLjgyMzMzIDExLjczNDQgMy4wNjczOEw0LjQwMTM3IDEwLjQwMDRDNC4xNTczOSAxMC42NDQ0IDMuNzYxNjggMTAuNjQ0MiAzLjUxNzU4IDEwLjQwMDRMMC4xODM1OTQgNy4wNjczOEMtMC4wNjA0ODM5IDYuODIzMzEgLTAuMDYwNDgzOSA2LjQyNjY5IDAuMTgzNTk0IDYuMTgyNjJDMC40Mjc2OTIgNS45Mzg3OCAwLjgyNDM2MyA1LjkzODYyIDEuMDY4MzYgNi4xODI2MkwzLjk1ODk4IDkuMDc0MjJMMTAuODUwNiAyLjE4MjYyWiIgZmlsbD0iIzRGNDZFNSIvPgo8L3N2Zz4K" alt=""><span id="apply-label"></span></button>
           <button class="action cancel" id="cancel-results">Отменить</button>
         </aside>
         <div class="paging">
@@ -434,12 +464,13 @@
         : settings ? 'Настройте пороги и разметьте найденные объекты.'
         : results.some(result => !result.confirmed) ? 'Подтвердите объекты по одному или все сразу.'
         : results.length ? 'Сохраните подтверждённую разметку.'
+        : !classes.length ? 'Добавьте класс «Арбуз», чтобы начать разметку.'
         : !panel ? 'Откройте «Разметка по тексту» на панели инструментов.'
-        : !classes.length ? 'Создайте класс «Арбуз». Для второго запроса добавьте «Дыню».'
         : invalid ? 'Выберите класс и заполните промпт в каждой строке.'
         : 'Начните разметку или уточните описание объекта в промпте.';
       if ($('guide').textContent !== message) $('guide').textContent = message;
       $('example').hidden = !panel || !classes.length || busy;
+      $('terminal').toggleAttribute('data-next', Boolean(classes.length && !panel && !settings && !results.length));
     }
 
     function updatePhoto() {
@@ -607,7 +638,16 @@
     }
 
     function setHighlight(id) {
-      for (const box of $('boxes').children) box.toggleAttribute('data-highlighted', box.dataset.id === id);
+      const shade = $('shade');
+      const active = [...$('boxes').children].find(box => box.dataset.id === id);
+      for (const box of $('boxes').children) box.toggleAttribute('data-highlighted', box === active);
+      if (active) {
+        const { left, top, width, height } = active.style;
+        const right = `calc(${left} + ${width})`;
+        const bottom = `calc(${top} + ${height})`;
+        shade.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${left} ${top}, ${right} ${top}, ${right} ${bottom}, ${left} ${bottom}, ${left} ${top}, 0 0)`;
+      }
+      shade.parentElement.toggleAttribute('data-visible', Boolean(active));
     }
 
     function selectObject(id) {
@@ -642,6 +682,7 @@
     }
 
     function renderObjects() {
+      setHighlight(null);
       const preview = previewResults();
       const visible = [...results.filter(result => result.confirmed), ...results.filter(result => !result.confirmed), ...preview];
       const list = $('object-list');
@@ -702,8 +743,10 @@
           updateGuide();
         };
         entry.append(remove);
-        entry.onmouseenter = () => setHighlight(result.id);
-        entry.onmouseleave = () => setHighlight(null);
+        entry.onpointerenter = event => { if (event.pointerType === 'mouse') setHighlight(result.id); };
+        entry.onpointerleave = event => {
+          if (event.pointerType === 'mouse' && !event.relatedTarget?.closest?.('.object-item')) setHighlight(null);
+        };
         entry.onfocusin = () => setHighlight(result.id);
         entry.onfocusout = event => { if (!entry.contains(event.relatedTarget)) setHighlight(null); };
         return entry;
@@ -720,9 +763,12 @@
 
     function syncPanels() {
       $('prompt').hidden = !panel;
+      $('prompt').inert = !panel;
       $('result-settings').hidden = !settings;
+      $('result-settings').inert = !settings;
+      $('sidebar').toggleAttribute('data-preview', settings);
       $('terminal').setAttribute('aria-pressed', panel || settings);
-      $('tooltip').hidden = panel || settings || !(hint || hovered);
+      $('tooltip').hidden = panel || settings || !(hovered || (hint && classes.length));
       $('cross').hidden = !panel || !classes.length;
       updateGuide();
     }
@@ -736,7 +782,6 @@
 
     function setZoom(value) {
       zoom = Math.min(200, Math.max(50, value));
-      $('scene').style.setProperty('--scale', zoom / 100);
       $('zoom-value').textContent = `${zoom}%`;
       $('zoom-value').setAttribute('aria-label', `Масштаб ${zoom}%. Сбросить масштаб и положение`);
       setPan(panX, panY);
@@ -752,8 +797,7 @@
       const visible = 48;
       panX = Math.max(visible - scene.offsetLeft - width - extraX, Math.min(x, canvas.clientWidth - visible - scene.offsetLeft + extraX));
       panY = Math.max(visible - scene.offsetTop - height - extraY, Math.min(y, canvas.clientHeight - visible - scene.offsetTop + extraY));
-      scene.style.setProperty('--pan-x', `${panX}px`);
-      scene.style.setProperty('--pan-y', `${panY}px`);
+      scene.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom / 100})`;
     }
 
     function setPanMode(enabled) {
@@ -768,6 +812,7 @@
 
     function reset() {
       clearTimeout(searchTimer);
+      $('boxes').removeAttribute('data-arriving');
       $('not-found').textContent = '';
       classes = [];
       rows = [];
@@ -906,6 +951,7 @@
         renderRows();
         renderSidebar();
         syncPanels();
+        if (workspace.hasAttribute('data-motion')) $('boxes').setAttribute('data-arriving', '');
         $('settings-title').setAttribute('tabindex', '-1');
         $('settings-title').focus({ preventScroll: true });
       }, 850);
@@ -953,6 +999,12 @@
     $('zoom-out').onclick = () => setZoom(zoom - 10);
     $('zoom-value').onclick = resetView;
     const canvas = $('canvas');
+    const workspace = canvas.parentElement;
+    document.addEventListener('pointerdown', () => workspace.setAttribute('data-motion', ''), true);
+    document.addEventListener('keydown', () => workspace.removeAttribute('data-motion'), true);
+    $('boxes').onanimationend = $('boxes').onanimationcancel = event => {
+      if (event.target === $('boxes')) $('boxes').removeAttribute('data-arriving');
+    };
     $('hand').onclick = () => setPanMode(canvas.dataset.pan !== 'true');
     canvas.onclick = event => {
       if (selected && !didPan && !event.target.closest('.box')) selectObject(null);
