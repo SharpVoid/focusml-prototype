@@ -14,7 +14,7 @@
     button,input,textarea,select{font:inherit;color:inherit}
     button{background:none;border:0;border-radius:8px;cursor:pointer;padding:0}
     button:disabled{cursor:default;opacity:.52}
-    button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+    a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
     img{display:block}
     .demo{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:7px 20px;border-bottom:1px solid #e9eef4;background:#f8fafc;z-index:10}
     .demo-info,.demo-actions{display:flex;align-items:center;gap:14px}
@@ -24,8 +24,10 @@
     .demo button:hover{border-color:#a9b8cd}
     .demo #example{color:var(--indigo);border-color:#dce0fb}
     .viewport{flex:1;min-height:0;display:grid;place-items:center;padding:0 12px}
-    .credit{text-align:center;padding:0 12px 12px;font-size:13px;color:var(--muted)}
+    .credit{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px;text-align:center;padding:0 12px 12px;font-size:13px;color:var(--muted)}
     .credit a{color:inherit;text-underline-offset:3px}
+    .credit .contact{border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--blue);background:var(--pale)}
+    .credit .contact:hover{background:#e2f3fc}
     .app{position:relative;width:1120px;zoom:var(--fit,1);padding:40px 0}
     .crumb{display:flex;align-items:center;gap:8px;color:var(--muted);margin-bottom:17px;height:26px}
     .crumb b{font-weight:600;color:#0f172a}
@@ -142,7 +144,7 @@
     .object-item[data-confirmed=true] .delete{opacity:0;pointer-events:none}
     .object-item:is(:hover,:focus-within,[data-selected=true]){background:#f0f9ff}
     .object-item[data-confirmed=false]:is(:hover,:focus-within){border-radius:10px}
-    .object-item:is(:hover,:focus-within) button.confirm{background:#fff}
+    .object-item:is(:hover,:focus-within) button:is(.confirm,.delete){background:#fff}
     .object-item[data-confirmed=true]:is(:hover,:focus-within,[data-selected=true]) .delete{opacity:1;pointer-events:auto}
     @media(hover:none){.object-item[data-confirmed=true] .delete{opacity:1;pointer-events:auto}}
     .confirm-all{margin-top:12px}
@@ -296,7 +298,7 @@
       </div>
     </main>
   </div>
-  <footer class="credit"><a href="https://lisenkomisha.ru">Михаил Лисенко</a></footer>
+  <footer class="credit"><a href="https://lisenkomisha.ru">Михаил Лисенко</a><a class="action contact" href="https://t.me/sharpvoid" target="_blank" rel="noopener noreferrer">Связаться</a></footer>
   <dialog id="class-dialog" aria-labelledby="class-title">
     <form id="class-form">
       <div class="card-title"><h2 id="class-title">Добавить класс</h2></div>

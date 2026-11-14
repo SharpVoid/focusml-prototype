@@ -12,6 +12,6 @@ $page = [regex]::Replace($source, 'asset:([\w-]+\.(?:svg|jpg|png|woff2))', {
     }
     $embedded[$name]
 })
-$offlineContent = $page.Replace('<a href="https://lisenkomisha.ru">', '<a>')
+$offlineContent = $page -replace '(<a\b[^>]*\s)href="https://(?:lisenkomisha\.ru|t\.me/sharpvoid)"', '$1'
 if ($offlineContent -match 'asset:[\w-]+\.' -or $offlineContent -match '[a-z]+://') { throw 'The prototype must be self-contained.' }
 [IO.File]::WriteAllText((Join-Path $PSScriptRoot 'index.html'), $page)
